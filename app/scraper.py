@@ -348,7 +348,7 @@ def scrape_historical_dii_data():
 
 
 
-
+# Data scrapping for derivative
 NSE_FII_DERIVATIVE_REPORT_URL = (
     "https://www.nseindia.com/api/reports"
 )
@@ -373,9 +373,10 @@ def scrape_fii_derivatives_data():
             "section": "equity"
         }
     ]
-
+    today = datetime.today().strftime("%d-%b-%Y")
     # Hardcoded for testing
-    today = "12-May-2026"
+    # today = "12-May-2026"
+    print("TODAY", print)
 
     params = {
         "archives": str(archives_payload).replace("'", '"'),
