@@ -353,8 +353,9 @@ NSE_FII_DERIVATIVE_REPORT_URL = (
     "https://www.nseindia.com/api/reports"
 )
 
-
-def scrape_fii_derivatives_data():
+def scrape_fii_derivatives_data(
+    custom_date=None
+):
 
     print("calling_scrape_fii_derivatives_data")
 
@@ -373,9 +374,16 @@ def scrape_fii_derivatives_data():
             "section": "equity"
         }
     ]
-    today = datetime.today().strftime("%d-%b-%Y")
+    # today = datetime.today().strftime("%d-%b-%Y")
     # Hardcoded for testing
     # today = "11-May-2026"
+
+    if custom_date:
+        today = custom_date
+    else:
+        today = datetime.today().strftime(
+            "%d-%b-%Y"
+        )
 
     trade_date = datetime.strptime(
         today,
@@ -595,3 +603,75 @@ def scrape_fii_derivatives_data():
     )
 
     return records
+
+def scrape_historical_fii_derivatives_data(
+    start_date,
+    end_date
+):
+
+    print(
+        "calling_scrape_historical_fii_derivatives_data"
+    )
+
+    all_records = []
+
+    current_date = datetime.strptime(
+        start_date,
+        "%d-%b-%Y"
+    ).date()
+
+    end_date_obj = datetime.strptime(
+        end_date,
+        "%d-%b-%Y"
+    ).date()
+
+    while current_date <= end_date_obj:
+
+        formatted_date = current_date.strftime(
+            "%d-%b-%Y"
+        )
+
+        print(
+            "PROCESSING_DATE",
+            formatted_date
+        )
+
+        try:
+
+            result = scrape_fii_derivatives_data(
+                custom_date=formatted_date
+            )
+
+            # File not available
+            if isinstance(result, dict):
+
+                print(
+                    result["message"]
+                )
+
+            else:
+
+                print(
+                    f"{formatted_date} "
+                    f"records fetched:",
+                    len(result)
+                )
+
+                all_records.extend(result)
+
+        except Exception as e:
+
+            print(
+                "Historical scrape failed for:",
+                formatted_date,
+                str(e)
+            )
+
+        current_date += timedelta(days=1)
+
+    print(
+        "TOTAL_HISTORICAL_FII_DERIVATIVE_RECORDS",
+        len(all_records)
+    )
+
+    return all_records

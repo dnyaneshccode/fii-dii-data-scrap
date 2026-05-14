@@ -11,6 +11,9 @@ from .crud import (
 from .scraper import scrape_fii_derivatives_data
 from .crud import insert_fii_derivatives_data
 import traceback
+from .scraper import (
+    scrape_historical_fii_derivatives_data
+)
 
 
 def run_daily_job():
@@ -131,6 +134,51 @@ def run_fii_derivatives_job():
         db.close()
 
 
+def run_historical_fii_derivatives_job():
+
+    db = SessionLocal()
+
+    try:
+
+        records = (
+            scrape_historical_fii_derivatives_data(
+                start_date="05-May-2026",
+                end_date="13-May-2026"
+            )
+        )
+
+        print(
+            "Historical derivative records fetched:",
+            len(records)
+        )
+
+        insert_fii_derivatives_data(
+            db,
+            records
+        )
+
+        print(
+            "Historical derivative "
+            "data updated successfully"
+        )
+
+    except Exception as e:
+
+        db.rollback()
+
+        print(
+            "Historical derivative "
+            "scheduler error:",
+            str(e)
+        )
+
+        traceback.print_exc()
+
+    finally:
+
+        db.close()
+
+
 scheduler = BackgroundScheduler()
 
 # Requirement 1 scheduler
@@ -153,5 +201,12 @@ scheduler.add_job(
     run_fii_derivatives_job,
     trigger='cron',
     hour=21,
+    minute=0
+)
+
+scheduler.add_job(
+    run_historical_fii_derivatives_job,
+    trigger='cron',
+    hour=22,
     minute=0
 )

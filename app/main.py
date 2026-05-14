@@ -4,7 +4,8 @@ from .scheduler import (
     scheduler,
     run_daily_job,
     run_historical_dii_job,
-    run_fii_derivatives_job
+    run_fii_derivatives_job,
+    run_historical_fii_derivatives_job
 )
 
 app = FastAPI()
@@ -45,4 +46,22 @@ def run_fii_derivatives():
     return {
         "message":
         "FII derivative data fetched successfully"
+    }
+
+@app.get("/run-historical-fii-derivatives")
+def run_historical_fii_derivatives():
+
+    result = (
+        run_historical_fii_derivatives_job()
+    )
+
+    if isinstance(result, dict):
+
+        return result
+
+    return {
+        "success": True,
+        "message":
+        "Historical FII derivative "
+        "data fetched successfully"
     }
