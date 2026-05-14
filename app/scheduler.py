@@ -14,7 +14,7 @@ import traceback
 from .scraper import (
     scrape_historical_fii_derivatives_data
 )
-
+from datetime import datetime
 
 def run_daily_job():
 
@@ -140,10 +140,28 @@ def run_historical_fii_derivatives_job():
 
     try:
 
+        # Historical start date
+        start_date = "01-Jan-2016"
+
+        # Dynamic today's date
+        end_date = datetime.today().strftime(
+            "%d-%b-%Y"
+        )
+
+        print(
+            "HISTORICAL_START_DATE",
+            start_date
+        )
+
+        print(
+            "HISTORICAL_END_DATE",
+            end_date
+        )
+
         records = (
             scrape_historical_fii_derivatives_data(
-                start_date="05-May-2026",
-                end_date="13-May-2026"
+                start_date=start_date,
+                end_date=end_date
             )
         )
 
