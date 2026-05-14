@@ -360,7 +360,6 @@ def scrape_fii_derivatives_data():
 
     session = get_session()
 
-    # NSE warmup for cookies
     session.get(
         "https://www.nseindia.com/",
         timeout=20
@@ -375,7 +374,9 @@ def scrape_fii_derivatives_data():
         }
     ]
 
+    # Hardcoded for testing
     today = "12-May-2026"
+
     params = {
         "archives": str(archives_payload).replace("'", '"'),
         "date": today,
@@ -393,30 +394,19 @@ def scrape_fii_derivatives_data():
 
     response.raise_for_status()
 
-    content_type = response.headers.get(
-        "content-type",
-        ""
+    print(
+        "CONTENT_TYPE",
+        response.headers.get("content-type")
     )
 
-    print("CONTENT_TYPE", content_type)
-
-    # Read excel directly from response
     excel_data = io.BytesIO(response.content)
-
-    xls = pd.ExcelFile(excel_data)
-
-    print("SHEETS", xls.sheet_names)
 
     df = pd.read_excel(
         excel_data,
-        sheet_name=0
+        sheet_name=0,
+        engine="xlrd",
+        header=None
     )
-
-    print(df.head())
-
-    records = []
- 
-    current_category = None
 
     records = []
 
@@ -429,14 +419,22 @@ def scrape_fii_derivatives_data():
         "STOCK OPTIONS": "STOCK_OPTIONS",
     }
 
+    skip_contains = [
+        "NOTES",
+        "VALUE",
+        "OPEN INTEREST AT THE END OF DAY",
+        "BOTH BUY AND SELL",
+        "NO. OF CONTRACTS",
+        "AMT IN CRORES",
+    ]
+
     for _, row in df.iterrows():
 
-        values = row.tolist()
+        raw_values = row.tolist()
 
-        # Remove nan values safely
         cleaned_values = []
 
-        for value in values:
+        for value in raw_values:
 
             if pd.isna(value):
 
@@ -448,83 +446,111 @@ def scrape_fii_derivatives_data():
                     str(value).strip()
                 )
 
-        if not cleaned_values:
+        non_empty_values = [
+            value
+            for value in cleaned_values
+            if value != ""
+        ]
+
+        if not non_empty_values:
             continue
 
-        first_col = cleaned_values[0]
-
-        if not first_col:
-            continue
+        first_col = non_empty_values[0]
 
         upper_value = first_col.upper().strip()
 
-        # CATEGORY DETECTION
-        if upper_value in valid_categories:
+        should_skip = any(
+            keyword in upper_value
+            for keyword in skip_contains
+        )
 
-            current_category = valid_categories[
-                upper_value
-            ]
+        if should_skip:
 
             print(
-                "CURRENT_CATEGORY_SET:",
-                current_category
+                "Skipping non-data row:",
+                first_col
             )
 
             continue
 
-        # Skip unwanted rows
-        skip_words = {
-            "TOTAL",
-            "GRAND TOTAL",
-            "BUY",
-            "SELL",
-            "OPEN INTEREST",
-        }
-
-        if upper_value in skip_words:
-            continue
-
-        # VERY IMPORTANT:
-        # Skip rows before category detected
-        if current_category is None:
-            continue
-
         try:
+
+            numeric_values = []
+
+            for value in non_empty_values[1:]:
+
+                parsed = _safe_float(value)
+
+                if parsed is not None:
+
+                    numeric_values.append(parsed)
+
+            # Need exactly 6 numeric values
+            if len(numeric_values) != 6:
+
+                print(
+                    "Skipping invalid row:",
+                    non_empty_values
+                )
+
+                continue
+
+            # CATEGORY SUMMARY ROW
+            if upper_value in valid_categories:
+
+                current_category = valid_categories[
+                    upper_value
+                ]
+
+                instrument_name = upper_value
+
+                print(
+                    "CURRENT_CATEGORY_SET:",
+                    current_category
+                )
+
+            else:
+
+                # Child rows
+                if current_category is None:
+                    continue
+
+                instrument_name = first_col
 
             record = {
 
-                "trade_date": datetime.today().date(),
+                "trade_date":
+                    datetime.today().date(),
 
-                "category": current_category,
+                "category":
+                    current_category,
 
-                "instrument_name": first_col,
+                "instrument_name":
+                    instrument_name,
 
-                "buy_contracts": _safe_float(
-                    cleaned_values[1]
-                ),
+                "buy_contracts":
+                    numeric_values[0],
 
-                "buy_amount_crores": _safe_float(
-                    cleaned_values[2]
-                ),
+                "buy_amount_crores":
+                    numeric_values[1],
 
-                "sell_contracts": _safe_float(
-                    cleaned_values[3]
-                ),
+                "sell_contracts":
+                    numeric_values[2],
 
-                "sell_amount_crores": _safe_float(
-                    cleaned_values[4]
-                ),
+                "sell_amount_crores":
+                    numeric_values[3],
 
-                "open_interest_contracts": _safe_float(
-                    cleaned_values[5]
-                ),
+                "open_interest_contracts":
+                    numeric_values[4],
 
-                "open_interest_amount_crores": _safe_float(
-                    cleaned_values[6]
-                ),
+                "open_interest_amount_crores":
+                    numeric_values[5],
             }
 
-            print("PARSED_RECORD", record)
+            print(
+                "PARSED_RECORD",
+                record
+            )
 
             records.append(record)
 
@@ -532,9 +558,10 @@ def scrape_fii_derivatives_data():
 
             print(
                 "Skipping derivative row:",
-                cleaned_values,
+                non_empty_values,
                 str(e)
             )
+
     print(
         "TOTAL_FII_DERIVATIVE_RECORDS",
         len(records)
