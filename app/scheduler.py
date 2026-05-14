@@ -88,7 +88,16 @@ def run_fii_derivatives_job():
 
     try:
 
-        records = scrape_fii_derivatives_data()
+        result = scrape_fii_derivatives_data()
+
+        # Handle file not available case
+        if isinstance(result, dict):
+
+            print(result["message"])
+
+            return result
+
+        records = result
 
         print(
             "FII Derivative records fetched:",

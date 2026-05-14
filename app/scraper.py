@@ -373,9 +373,9 @@ def scrape_fii_derivatives_data():
             "section": "equity"
         }
     ]
-    # today = datetime.today().strftime("%d-%b-%Y")
+    today = datetime.today().strftime("%d-%b-%Y")
     # Hardcoded for testing
-    today = "11-May-2026"
+    # today = "11-May-2026"
 
     trade_date = datetime.strptime(
         today,
@@ -397,6 +397,25 @@ def scrape_fii_derivatives_data():
         params=params,
         timeout=60
     )
+
+    print("STATUS_CODE", response.status_code)
+
+    # IMPORTANT:
+    # NSE may not upload file yet for today's date
+    if response.status_code == 404:
+
+        message = (
+            f"FII derivative file is not available yet "
+            f"for date {today}"
+        )
+
+        print(message)
+
+        return {
+            "success": False,
+            "message": message,
+            "records": []
+        }
 
     print("STATUS_CODE", response.status_code)
 
