@@ -373,10 +373,17 @@ def scrape_fii_derivatives_data():
             "section": "equity"
         }
     ]
-    today = datetime.today().strftime("%d-%b-%Y")
+    # today = datetime.today().strftime("%d-%b-%Y")
     # Hardcoded for testing
-    # today = "12-May-2026"
-    print("TODAY", print)
+    today = "11-May-2026"
+
+    trade_date = datetime.strptime(
+        today,
+        "%d-%b-%Y"
+    ).date()
+
+    print("TODAY", today)
+    print("TRADE_DATE", trade_date)
 
     params = {
         "archives": str(archives_payload).replace("'", '"'),
@@ -521,7 +528,7 @@ def scrape_fii_derivatives_data():
             record = {
 
                 "trade_date":
-                    datetime.today().date(),
+                    trade_date,
 
                 "category":
                     current_category,
